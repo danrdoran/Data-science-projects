@@ -10,7 +10,6 @@ from sklearn.preprocessing import StandardScaler
 
 from datetime import datetime
 import os
-import idp_c
 
 import warnings, random
 
