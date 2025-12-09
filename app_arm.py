@@ -9,7 +9,6 @@ from sklearn.impute import KNNImputer
 from sklearn.preprocessing import StandardScaler
 
 from datetime import datetime
-import os
 
 import warnings, random
 
@@ -48,7 +47,6 @@ ARAB_COUNTRIES = [
     'Tunisia','United Arab Emirates','Yemen'
 ]
 
-NEWS_DOCX_PATH = "data/syria_news_sample_22oct25.docx"
 
 
 # ════════════════════════════════════════
@@ -359,22 +357,7 @@ def build_time_safe_datasets(missing_thresh: float = 0.95):
     }
 
 data_bundle = build_time_safe_datasets(missing_thresh=0.95)
-feature_cols_model = data_bundle["keep_cols"]
-pre = data_bundle["pre"]
-spl = data_bundle["splits"]
 arab_df = data_bundle["arab_df"]
-
-def get_latest_good_year(arab_df, feature_cols, max_missing_pct=0.4, min_countries=5):
-    year_quality = (
-        arab_df.groupby('years')[feature_cols]
-        .apply(lambda df: df.isna().mean().mean())
-        .sort_index(ascending=False)
-    )
-    for year, missing_frac in year_quality.items():
-        country_count = arab_df.loc[arab_df['years'] == year, 'country_name'].nunique()
-        if missing_frac <= max_missing_pct and country_count >= min_countries:
-            return int(year)
-    return int(arab_df['years'].max())
 
 def fmt2_trim(x):
     import math
@@ -385,7 +368,6 @@ def fmt2_trim(x):
 # ════════════════════════════════════════
 # Helpers for hierarchy filters (tab-only)
 # ════════════════════════════════════════
-ALL_ALLOWED_FEATURES: List[str] = [k for k in HIERARCHY.keys() if k in raw_df.columns]
 
 def get_filtered_features(pathway: str, domain: str, component: str, driver: str) -> List[str]:
     feats = []
@@ -404,47 +386,9 @@ def get_filtered_features(pathway: str, domain: str, component: str, driver: str
         feats.append(feat)
     return feats
 
-def cascade_options(current_filter: Dict[str, str]) -> Dict[str, List[str]]:
-    # Use only AVAILABLE_FEATURES to build option lists
-    meta_rows = [HIERARCHY[f] for f in AVAILABLE_FEATURES]
-    df_meta = pd.DataFrame(meta_rows, index=AVAILABLE_FEATURES)
-    mask = pd.Series(True, index=df_meta.index)
-    if current_filter['Pathway'] != "All":
-        mask &= (df_meta['Pathway'] == current_filter['Pathway'])
-    doms = sorted(df_meta[mask]['Domain'].unique().tolist())
-    if current_filter.get('Domain', "All") != "All":
-        mask &= (df_meta['Domain'] == current_filter['Domain'])
-    comps = sorted(df_meta[mask]['Component'].unique().tolist())
-    if current_filter.get('Component', "All") != "All":
-        mask &= (df_meta['Component'] == current_filter['Component'])
-    drvs = sorted(df_meta[mask]['Driver'].unique().tolist())
-    return {"Domains": doms, "Components": comps, "Drivers": drvs}
-
 # ════════════════════════════════════════
 # GLOBAL PERCENTILE MAPS (for absolute quartiles)
 # ════════════════════════════════════════
-@st.cache_data
-def build_global_percentiles(df: pd.DataFrame, features: List[str]):
-    # Work only with features that truly exist in df to avoid KeyError
-    actual = [f for f in features if f in df.columns]
-    ecdfs = {}
-    for f in actual:
-        s = df[f].dropna().astype(float)
-        if len(s) >= 2:
-            arr = np.sort(s.values)
-            n = len(arr)
-            ecdfs[f] = (arr, n)
-        else:
-            ecdfs[f] = (np.array([]), 0)
-    return ecdfs
-
-def value_to_global_percentile(feature: str, value: float) -> float:
-    """Return p in [0,1] using right-sided ECDF: p = P(X ≤ value)."""
-    arr, n = GLOBAL_ECDFS.get(feature, (np.array([]), 0))
-    if n == 0 or value is None or (isinstance(value, float) and np.isnan(value)):
-        return np.nan
-    idx = np.searchsorted(arr, value, side="right")
-    return idx / n
 
 def is_high_good(feature: str) -> bool:
     if feature in GOOD_HIGH_FEATURES:
@@ -477,7 +421,6 @@ def get_value_for_target_year(country_df: pd.DataFrame, feature: str, target_yea
 
 # Build AVAILABLE_FEATURES from arab_df (post filtering) and then ECDFs on that set
 AVAILABLE_FEATURES: List[str] = [f for f in HIERARCHY.keys() if f in arab_df.columns]
-GLOBAL_ECDFS = build_global_percentiles(arab_df, AVAILABLE_FEATURES)
 
 # ════════════════════════════════════════
 # TABS
