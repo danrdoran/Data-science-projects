@@ -3,13 +3,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-from typing import Dict, List, Tuple
-
-from sklearn.impute import KNNImputer
-from sklearn.preprocessing import StandardScaler
-
-from datetime import datetime
-
+from typing import Dict, List
 import warnings, random
 
 # ════════════════════════════════════════
@@ -230,22 +224,19 @@ BAD_HIGH_FEATURES = {
 # ════════════════════════════════════════
 @st.cache_data
 def load_raw() -> pd.DataFrame:
-    df_ind = pd.read_excel("data/data_risk_v2.xlsx", sheet_name='data_indicators')
-    df_con = pd.read_csv("data/Conflict_Status_by_Year.csv")
+    """
+    Load indicator data from the Excel file only.
+    No conflict CSV is used anymore.
+    """
+    df_ind = pd.read_excel("data/data_risk_v2.xlsx", sheet_name="data_indicators")
+    df_ind["years"] = df_ind["years"].astype(int)
 
-    df_con = df_con.melt(id_vars=['Unnamed: 0'], var_name='years', value_name='conflict')
-    df_con.rename(columns={'Unnamed: 0': 'country_name'}, inplace=True)
-    df_con['years'] = df_con['years'].astype(int)
-
-    df_ind['years'] = df_ind['years'].astype(int)
-    df = df_ind.merge(df_con, on=['country_name','years'], how='left')
-    df['conflict'] = df['conflict'].fillna(0).astype(int)
-
-    df = df[df['years'] >= 2006].copy()
+    # Keep only years ≥ 2006 as before
+    df = df_ind[df_ind["years"] >= 2006].copy()
     return df
 
 raw_df = load_raw()
-meta_cols = ['country_code','country_name','years','conflict']
+meta_cols = ['country_code', 'country_name', 'years']
 value_cols = [c for c in raw_df.columns if c not in meta_cols]
 raw_df[value_cols] = raw_df[value_cols].apply(pd.to_numeric, errors='coerce')
 candidate_cols = [c for c in raw_df.columns if c not in meta_cols]
@@ -258,102 +249,27 @@ def forward_fill_panel(df: pd.DataFrame, cols: List[str]) -> pd.DataFrame:
     df2[cols] = df2.groupby('country_name')[cols].ffill()
     return df2
 
-def build_target_and_split(df: pd.DataFrame, feature_cols: List[str]) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    df2 = df.sort_values(['country_name','years']).copy()
-    df2['conflict_next_year'] = df2.groupby('country_name')['conflict'].shift(-1)
-    df2 = df2.dropna(subset=['conflict_next_year']).copy()
-    df2['conflict_next_year'] = df2['conflict_next_year'].astype(int)
-
-    df2['max_year'] = df2.groupby('country_name')['years'].transform('max')
-    train = df2[df2['years'] < df2['max_year']].copy()
-    test  = df2[df2['years'] == df2['max_year']].copy()
-
-    train['max_train_year'] = train.groupby('country_name')['years'].transform('max')
-    val = train[train['years'] == train['max_train_year']].copy()
-    trn = train[train['years'] < train['max_train_year']].copy()
-    return trn, val, test
-
-def select_features_on_train(train_df: pd.DataFrame, cols: List[str], missing_thresh: float = 0.25) -> List[str]:
-    miss = train_df[cols].isna().mean()
-    keep = miss[miss <= missing_thresh].index.tolist()
-    return keep
-
-def fit_preprocessor(train_df: pd.DataFrame, cols: List[str]) -> Dict:
-    means = train_df[cols].mean(skipna=True).values
-    stds  = train_df[cols].std(skipna=True, ddof=0).replace(0, 1.0).values
-
-    X_tr_scaled = (train_df[cols].values - means) / stds
-    knn = KNNImputer(n_neighbors=5)
-    knn.fit(X_tr_scaled)
-
-    X_tr_imp_scaled = knn.transform(X_tr_scaled)
-    X_tr_imp = X_tr_imp_scaled * stds + means
-
-    medians = np.nanmedian(X_tr_imp, axis=0)
-    X_tr_imp = np.where(np.isnan(X_tr_imp), medians, X_tr_imp)
-
-    scaler = StandardScaler()
-    scaler.fit(X_tr_imp)
-
-    return {"means": means, "stds": stds, "knn": knn, "medians": medians, "scaler": scaler, "cols": cols}
-
-def transform_with_preproc(df: pd.DataFrame, pre: Dict) -> Tuple[pd.DataFrame, pd.DataFrame]:
-    cols = pre["cols"]
-    means, stds, knn, medians, scaler = pre["means"], pre["stds"], pre["knn"], pre["medians"], pre["scaler"]
-
-    X = df[cols].values
-    X_scaled = (X - means) / stds
-    X_imp_scaled = knn.transform(X_scaled)
-    X_imp = X_imp_scaled * stds + means
-    X_imp = np.where(np.isnan(X_imp), medians, X_imp)
-
-    X_model = scaler.transform(X_imp)
-
-    X_imp_df = pd.DataFrame(X_imp, columns=cols, index=df.index)
-    X_model_df = pd.DataFrame(X_model, columns=cols, index=df.index)
-    return X_model_df, X_imp_df
-
 @st.cache_data
 def build_time_safe_datasets(missing_thresh: float = 0.95):
+    """
+    Simplified version:
+    - forward-fill indicator values over time
+    - keep only Arab countries
+    - return the panel used by the UI
+    """
     ff_df = forward_fill_panel(raw_df, candidate_cols)
 
-    tmp = ff_df.copy()
-    tmp['conflict_next_year'] = tmp.groupby('country_name')['conflict'].shift(-1)
-    tmp = tmp.dropna(subset=['conflict_next_year'])
-    tmp['conflict_next_year'] = tmp['conflict_next_year'].astype(int)
-    tmp['max_year'] = tmp.groupby('country_name')['years'].transform('max')
-
-    train_all = tmp[tmp['years'] < tmp['max_year']].copy()
-    _ = tmp[tmp['years'] == tmp['max_year']].copy()  # not used here, but kept for parity
-
-    keep_cols = select_features_on_train(train_all, [c for c in tmp.columns if c not in meta_cols+['conflict_next_year','max_year']], missing_thresh)
-
-    trn, val, tst = build_target_and_split(ff_df[meta_cols + keep_cols], keep_cols)
-
-    pre = fit_preprocessor(trn, keep_cols)
-
-    X_tr_m, X_tr_imp = transform_with_preproc(trn, pre)
-    X_va_m, X_va_imp = transform_with_preproc(val, pre)
-    X_te_m, X_te_imp = transform_with_preproc(tst, pre)
-
-    y_tr = trn['conflict_next_year'].values
-    y_va = val['conflict_next_year'].values
-    y_te = tst['conflict_next_year'].values
-
-    arab_mask_all = ff_df['country_name'].isin(ARAB_COUNTRIES)
-    arab_df = ff_df.loc[arab_mask_all, ['country_code','country_name','years'] + keep_cols].copy()
+    arab_mask_all = ff_df["country_name"].isin(ARAB_COUNTRIES)
+    arab_df = ff_df.loc[
+        arab_mask_all,
+        ["country_code", "country_name", "years"] + candidate_cols
+    ].copy()
 
     return {
-        "keep_cols": keep_cols,
-        "pre": pre,
-        "splits": {
-            "trn_df": trn, "val_df": val, "tst_df": tst,
-            "X_tr": X_tr_m, "y_tr": y_tr,
-            "X_va": X_va_m, "y_va": y_va,
-            "X_te": X_te_m, "y_te": y_te,
-            "X_tr_imp": X_tr_imp, "X_va_imp": X_va_imp, "X_te_imp": X_te_imp
-        },
-        "arab_df": arab_df
+        "keep_cols": candidate_cols,
+        "pre": None,
+        "splits": None,
+        "arab_df": arab_df,
     }
 
 data_bundle = build_time_safe_datasets(missing_thresh=0.95)
