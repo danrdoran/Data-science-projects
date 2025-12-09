@@ -364,26 +364,27 @@ with tab1:
             - **0.0** = Worst possible performance globally
             
             **🌍 Benefits of global normalization:**
+                        
             ✅ **Cross-country prioritization** - Instantly spot which indicators are globally weak/strong  
             ✅ **Resource allocation** - "We're at 15th percentile for water" is persuasive and clear  
             ✅ **Portfolio balance** - Compare across domains (health, climate, institutions) without unit confusion  
             ✅ **Trade-off analysis** - See asymmetries clearly (e.g., mid-pack GDP but bottom-decile mortality)
             """)
-        with col_norm2:
-            st.markdown("""
-            **Coming soon: Raw values toggle**
+        # with col_norm2:
+        #     st.markdown("""
+        #     **Coming soon: Raw values toggle**
             
-            Raw values show actual units (%, $/capita, per 100k, etc.)
+        #     Raw values show actual units (%, $/capita, per 100k, etc.)
             
-            **📊 Benefits of raw values:**
-            ✅ **Operational targets** - Policies are funded and monitored in real units  
-            ✅ **Impact modeling** - Analysts need raw values for elasticities (e.g., 1% unemployment drop saves X)  
-            ✅ **Legal/SDG thresholds** - Many goals are absolute (<70 maternal deaths/100k; ≥90% water access)  
-            ✅ **Direct interpretation** - Stakeholders understand "5% unemployment" vs "0.85 normalized score"
+        #     **📊 Benefits of raw values:**
+        #     ✅ **Operational targets** - Policies are funded and monitored in real units  
+        #     ✅ **Impact modeling** - Analysts need raw values for elasticities (e.g., 1% unemployment drop saves X)  
+        #     ✅ **Legal/SDG thresholds** - Many goals are absolute (<70 maternal deaths/100k; ≥90% water access)  
+        #     ✅ **Direct interpretation** - Stakeholders understand "5% unemployment" vs "0.85 normalized score"
             
-            *Option to toggle between views will be added in next release*
-            """)
-        st.info("💡 **Best practice:** Use global-normalized for strategic prioritization, raw values for operational planning")
+        #     *Option to toggle between views will be added in next release*
+        #     """)
+        # st.info("💡 **Best practice:** Use global-normalized for strategic prioritization, raw values for operational planning")
     
     st.markdown("### 📊 Analytical Framework")
     st.markdown("*Three-pathway risk assessment model: Vulnerability is the likelihood and structural exposure to shocks, and resilience is the policy-driven capacity to absorb the negative impact of shocks.*")
