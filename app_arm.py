@@ -874,8 +874,6 @@ if len(country_data) > 0 and len(display_feature_cols) > 0:
         - 🟠 **Orange** (25th-50th percentile): Below median performance
         - 🔴 **Red** (< 25th percentile): Bottom quartile globally
         - ⬜ **Gray**: No data available
-        
-        *Note: Colors are automatically adjusted based on whether high values are good or bad for each indicator*
         """)
     # with colB:
     #     st.markdown("### 🧭 Indicator Directionality")
