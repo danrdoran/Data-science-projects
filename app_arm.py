@@ -13,7 +13,7 @@ warnings.filterwarnings("ignore")
 sns.set_style("whitegrid")
 plt.rcParams.update({'font.size': 11})
 
-st.set_page_config(page_title="Early Warning System", layout="wide")
+st.set_page_config(page_title="Arab Risk Monitor - Multidimensional Risk Analysis", layout="wide")
 PURPLE = "#FBF8FF"
 st.markdown(f"""
     <style>
@@ -28,7 +28,7 @@ plt.rcParams["figure.facecolor"] = "none"
 plt.rcParams["axes.facecolor"]   = "none"
 plt.rcParams["savefig.facecolor"] = "none"
 
-st.title("🌍 Early Warning System")
+st.title("📈 Arab Risk Monitor - Multidimensional Risk Analysis")
 
 SEED = 42
 random.seed(SEED)
@@ -341,751 +341,747 @@ AVAILABLE_FEATURES: List[str] = [f for f in HIERARCHY.keys() if f in arab_df.col
 # ════════════════════════════════════════
 # TABS
 # ════════════════════════════════════════
-tab1, = st.tabs([
-    "📈 Multidimensional Risk Analysis",
-])
 
-with tab1:
-    st.header("📈 Arab Risk Monitor - Multidimensional Risk Analysis")
-    st.markdown("""
-    **Track the evolution of key vulnerability and resilience indicators** for Arab countries over time.
-    Use the **Pathway → Domain → Component → Driver** filters to focus on relevant parts of the framework.
-    """)
-    
-    # Data normalization info box
-    with st.expander("ℹ️ **About Data Normalization**", expanded=False):
-        col_norm1, col_norm2 = st.columns(2)
-        with col_norm1:
-            st.markdown("""
-            **Currently showing: Global-normalized values (0-1 scale)**
-            
-            All indicators are normalized on a global scale from 0-1, where:
-            - **1.0** = Best possible performance globally
-            - **0.0** = Worst possible performance globally
-            
-            **🌍 Benefits of global normalization:**
-                        
-            ✅ **Cross-country prioritization** - Instantly spot which indicators are globally weak/strong  
-            ✅ **Resource allocation** - "We're at 15th percentile for water" is persuasive and clear  
-            ✅ **Portfolio balance** - Compare across domains (health, climate, institutions) without unit confusion  
-            ✅ **Trade-off analysis** - See asymmetries clearly (e.g., mid-pack GDP but bottom-decile mortality)
-            """)
-        # with col_norm2:
-        #     st.markdown("""
-        #     **Coming soon: Raw values toggle**
-            
-        #     Raw values show actual units (%, $/capita, per 100k, etc.)
-            
-        #     **📊 Benefits of raw values:**
-        #     ✅ **Operational targets** - Policies are funded and monitored in real units  
-        #     ✅ **Impact modeling** - Analysts need raw values for elasticities (e.g., 1% unemployment drop saves X)  
-        #     ✅ **Legal/SDG thresholds** - Many goals are absolute (<70 maternal deaths/100k; ≥90% water access)  
-        #     ✅ **Direct interpretation** - Stakeholders understand "5% unemployment" vs "0.85 normalized score"
-            
-        #     *Option to toggle between views will be added in next release*
-        #     """)
-        # st.info("💡 **Best practice:** Use global-normalized for strategic prioritization, raw values for operational planning")
-    
-    st.markdown("### 📊 Analytical Framework")
-    st.markdown("*Three-pathway risk assessment model: Vulnerability is the likelihood and structural exposure to shocks, and resilience is the policy-driven capacity to absorb the negative impact of shocks.*")
-    
-    # Display the framework graphic
-    try:
-        col1, col2, col3 = st.columns([1, 2, 1])
-        with col2:
-            st.image("data/arm_hierarchy.png", width=700)
-    except:
-        # Fallback if image doesn't exist
-        st.info("""
-        **Framework Overview:**
+
+st.markdown("""
+**Track the evolution of key vulnerability and resilience indicators** for Arab countries over time.
+Use the **Pathway → Domain → Component → Driver** filters to focus on relevant parts of the framework.
+""")
+
+# Data normalization info box
+with st.expander("ℹ️ **About Data Normalization**", expanded=False):
+    col_norm1, col_norm2 = st.columns(2)
+    with col_norm1:
+        st.markdown("""
+        **Currently showing: Global-normalized values (0-1 scale)**
         
-        🔴 **Conflict Pathway**
-        - Conflict domain
+        All indicators are normalized on a global scale from 0-1, where:
+        - **1.0** = Best possible performance globally
+        - **0.0** = Worst possible performance globally
         
-        🟢 **Climate Pathway**  
-        - Climate Hazards
-        - Natural Resources
-        
-        🟠 **Development Pathway**
-        - Economy
-        - Society  
-        - Institutions
-        - Technology & Innovation
-        
-        Each domain assesses **Vulnerability** and **Resilience** to determine overall risk.
+        **🌍 Benefits of global normalization:**
+                    
+        ✅ **Cross-country prioritization** - Instantly spot which indicators are globally weak/strong  
+        ✅ **Resource allocation** - "We're at 15th percentile for water" is persuasive and clear  
+        ✅ **Portfolio balance** - Compare across domains (health, climate, institutions) without unit confusion  
+        ✅ **Trade-off analysis** - See asymmetries clearly (e.g., mid-pack GDP but bottom-decile mortality)
         """)
-
-    st.markdown("### 🌍 Select Country or Region")
-    available_countries = sorted(raw_df[raw_df['country_name'].isin(ARAB_COUNTRIES)]['country_name'].unique())
-    country_options = ["Arab Region"] + available_countries
-    selected_country = st.selectbox(
-        "Select a country to analyze:",
-        country_options,
-        help="Choose an Arab country or the Arab Region to view development trajectories",
-        key="country_trends_selector",
-        label_visibility="collapsed"
-    )
+    # with col_norm2:
+    #     st.markdown("""
+    #     **Coming soon: Raw values toggle**
         
-
-
-    # Helper function to categorize scores
-    def categorize_score(score):
-        if pd.isna(score) or score is None:
-            return None
-        if score <= 0.20:
-            return "Very Low"
-        elif score <= 0.40:
-            return "Low"
-        elif score <= 0.60:
-            return "Medium"
-        elif score <= 0.80:
-            return "High"
-        else:
-            return "Very High"
-    
-    # Risk matrix lookup
-    def get_overall_risk(vulnerability_cat, resilience_cat):
-        if vulnerability_cat is None or resilience_cat is None:
-            return "No Data"
+    #     Raw values show actual units (%, $/capita, per 100k, etc.)
         
-        risk_matrix = {
-            ("Very High", "Very Low"): "Severe",
-            ("Very High", "Low"): "Severe",
-            ("Very High", "Medium"): "Significant",
-            ("Very High", "High"): "Moderate",
-            ("Very High", "Very High"): "Moderate",
-            ("High", "Very Low"): "Severe",
-            ("High", "Low"): "Significant",
-            ("High", "Medium"): "Significant",
-            ("High", "High"): "Moderate",
-            ("High", "Very High"): "Moderate",
-            ("Medium", "Very Low"): "Significant",
-            ("Medium", "Low"): "Significant",
-            ("Medium", "Medium"): "Moderate",
-            ("Medium", "High"): "Minor",
-            ("Medium", "Very High"): "Minor",
-            ("Low", "Very Low"): "Moderate",
-            ("Low", "Low"): "Moderate",
-            ("Low", "Medium"): "Minor",
-            ("Low", "High"): "Minor",
-            ("Low", "Very High"): "Negligible",
-            ("Very Low", "Very Low"): "Moderate",
-            ("Very Low", "Low"): "Moderate",
-            ("Very Low", "Medium"): "Minor",
-            ("Very Low", "High"): "Negligible",
-            ("Very Low", "Very High"): "Negligible",
-        }
-        return risk_matrix.get((vulnerability_cat, resilience_cat), "Unknown")
-    
-    # Color mapping for overall risk
-    def get_risk_color(risk_level):
-        color_map = {
-            "Severe": "#e74c3c",
-            "Significant": "#f39c12",
-            "Moderate": "#f1c40f",
-            "Minor": "#82e0aa",
-            "Negligible": "#27ae60",
-            "No Data": "#95a5a6"
-        }
-        return color_map.get(risk_level, "#ffffff")
+    #     **📊 Benefits of raw values:**
+    #     ✅ **Operational targets** - Policies are funded and monitored in real units  
+    #     ✅ **Impact modeling** - Analysts need raw values for elasticities (e.g., 1% unemployment drop saves X)  
+    #     ✅ **Legal/SDG thresholds** - Many goals are absolute (<70 maternal deaths/100k; ≥90% water access)  
+    #     ✅ **Direct interpretation** - Stakeholders understand "5% unemployment" vs "0.85 normalized score"
+        
+    #     *Option to toggle between views will be added in next release*
+    #     """)
+    # st.info("💡 **Best practice:** Use global-normalized for strategic prioritization, raw values for operational planning")
 
-    
-    # ════════════════════════════════════════════════════════════════
-    # OVERALL RISK ASSESSMENT TABLE
-    # ════════════════════════════════════════════════════════════════
+st.markdown("### 📊 Analytical Framework")
+st.markdown("*Three-pathway risk assessment model: Vulnerability is the likelihood and structural exposure to shocks, and resilience is the policy-driven capacity to absorb the negative impact of shocks.*")
 
-    # Build country (or regional average) dataset
-    if selected_country == "Arab Region":
-        sub = raw_df[(raw_df['country_name'].isin(ARAB_COUNTRIES)) & (raw_df['years'] <= 2024)].copy()
-        reg = sub.groupby('years').mean(numeric_only=True).reset_index()
-        reg['country_name'] = "Arab Region"
-        country_data = reg
+# Display the framework graphic
+try:
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        st.image("data/arm_hierarchy.png", width=700)
+except:
+    # Fallback if image doesn't exist
+    st.info("""
+    **Framework Overview:**
+    
+    🔴 **Conflict Pathway**
+    - Conflict domain
+    
+    🟢 **Climate Pathway**  
+    - Climate Hazards
+    - Natural Resources
+    
+    🟠 **Development Pathway**
+    - Economy
+    - Society  
+    - Institutions
+    - Technology & Innovation
+    
+    Each domain assesses **Vulnerability** and **Resilience** to determine overall risk.
+    """)
+
+st.markdown("### 🌍 Select Country or Region")
+available_countries = sorted(raw_df[raw_df['country_name'].isin(ARAB_COUNTRIES)]['country_name'].unique())
+country_options = ["Arab Region"] + available_countries
+selected_country = st.selectbox(
+    "Select a country to analyze:",
+    country_options,
+    help="Choose an Arab country or the Arab Region to view development trajectories",
+    key="country_trends_selector",
+    label_visibility="collapsed"
+)
+    
+
+
+# Helper function to categorize scores
+def categorize_score(score):
+    if pd.isna(score) or score is None:
+        return None
+    if score <= 0.20:
+        return "Very Low"
+    elif score <= 0.40:
+        return "Low"
+    elif score <= 0.60:
+        return "Medium"
+    elif score <= 0.80:
+        return "High"
     else:
-        country_data = raw_df[
-            (raw_df['country_name'] == selected_country) &
-            (raw_df['years'] <= 2024)
-        ].copy()
+        return "Very High"
+
+# Risk matrix lookup
+def get_overall_risk(vulnerability_cat, resilience_cat):
+    if vulnerability_cat is None or resilience_cat is None:
+        return "No Data"
     
-    # Data availability info
-    available_years = sorted(country_data['years'].unique()) if len(country_data) else []
-    if available_years:
-        st.info(f"📅 Data available: {min(available_years)}-{max(available_years)}")
+    risk_matrix = {
+        ("Very High", "Very Low"): "Severe",
+        ("Very High", "Low"): "Severe",
+        ("Very High", "Medium"): "Significant",
+        ("Very High", "High"): "Moderate",
+        ("Very High", "Very High"): "Moderate",
+        ("High", "Very Low"): "Severe",
+        ("High", "Low"): "Significant",
+        ("High", "Medium"): "Significant",
+        ("High", "High"): "Moderate",
+        ("High", "Very High"): "Moderate",
+        ("Medium", "Very Low"): "Significant",
+        ("Medium", "Low"): "Significant",
+        ("Medium", "Medium"): "Moderate",
+        ("Medium", "High"): "Minor",
+        ("Medium", "Very High"): "Minor",
+        ("Low", "Very Low"): "Moderate",
+        ("Low", "Low"): "Moderate",
+        ("Low", "Medium"): "Minor",
+        ("Low", "High"): "Minor",
+        ("Low", "Very High"): "Negligible",
+        ("Very Low", "Very Low"): "Moderate",
+        ("Very Low", "Low"): "Moderate",
+        ("Very Low", "Medium"): "Minor",
+        ("Very Low", "High"): "Negligible",
+        ("Very Low", "Very High"): "Negligible",
+    }
+    return risk_matrix.get((vulnerability_cat, resilience_cat), "Unknown")
+
+# Color mapping for overall risk
+def get_risk_color(risk_level):
+    color_map = {
+        "Severe": "#e74c3c",
+        "Significant": "#f39c12",
+        "Moderate": "#f1c40f",
+        "Minor": "#82e0aa",
+        "Negligible": "#27ae60",
+        "No Data": "#95a5a6"
+    }
+    return color_map.get(risk_level, "#ffffff")
+
+
+# ════════════════════════════════════════════════════════════════
+# OVERALL RISK ASSESSMENT TABLE
+# ════════════════════════════════════════════════════════════════
+
+# Build country (or regional average) dataset
+if selected_country == "Arab Region":
+    sub = raw_df[(raw_df['country_name'].isin(ARAB_COUNTRIES)) & (raw_df['years'] <= 2024)].copy()
+    reg = sub.groupby('years').mean(numeric_only=True).reset_index()
+    reg['country_name'] = "Arab Region"
+    country_data = reg
+else:
+    country_data = raw_df[
+        (raw_df['country_name'] == selected_country) &
+        (raw_df['years'] <= 2024)
+    ].copy()
+
+# Data availability info
+available_years = sorted(country_data['years'].unique()) if len(country_data) else []
+if available_years:
+    st.info(f"📅 Data available: {min(available_years)}-{max(available_years)}")
+else:
+    st.info("📅 No data available")
+
+
+if len(country_data) > 0:
+    st.markdown("---")
+    st.subheader(f"🎯 Overall Risk Assessment: {selected_country}")
+    st.markdown("*Based on latest available data across all domains*")
+    
+    # Build risk assessment by pathway and domain
+    # Get most recent data (from 2020 onwards)
+    recent_data = country_data[country_data['years'] >= 2020].copy()
+
+    if len(recent_data) == 0:
+        st.info("No data available from 2020 onwards to generate risk assessment")
+        risk_assessment = []
     else:
-        st.info("📅 No data available")
-
-
-    if len(country_data) > 0:
-        st.markdown("---")
-        st.subheader(f"🎯 Overall Risk Assessment: {selected_country}")
-        st.markdown("*Based on latest available data across all domains*")
-        
         # Build risk assessment by pathway and domain
-        # Get most recent data (from 2020 onwards)
-        recent_data = country_data[country_data['years'] >= 2020].copy()
-
-        if len(recent_data) == 0:
-            st.info("No data available from 2020 onwards to generate risk assessment")
-            risk_assessment = []
-        else:
-            # Build risk assessment by pathway and domain
-            risk_assessment = []
-            
-            # Define custom pathway order
-            pathway_order = ['Conflict', 'Climate', 'Development']
-
-            # Get all unique pathways and sort by custom order
-            all_pathways = {HIERARCHY[f]['Pathway'] for f in AVAILABLE_FEATURES}
-            ordered_pathways = [p for p in pathway_order if p in all_pathways]
-
-            for pathway in ordered_pathways:
-                pathway_domains = sorted({HIERARCHY[f]['Domain'] for f in AVAILABLE_FEATURES if HIERARCHY[f]['Pathway'] == pathway})                
-                for domain in pathway_domains:
-                    # Get features for this pathway-domain combination (check against AVAILABLE_FEATURES, not country data)
-                    all_domain_features = [f for f in AVAILABLE_FEATURES 
-                                    if HIERARCHY[f]['Pathway'] == pathway 
-                                    and HIERARCHY[f]['Domain'] == domain]
-                    
-                    if not all_domain_features:
-                        continue
-                    
-                    # Separate vulnerability and resilience features
-                    vuln_features = [f for f in all_domain_features if HIERARCHY[f]['Component'] == 'Vulnerability']
-                    res_features = [f for f in all_domain_features if HIERARCHY[f]['Component'] == 'Resilience']
-                    
-                    # Calculate averages using most recent non-null value for each feature
-                    vuln_values = []
-                    for f in vuln_features:
-                        if f in recent_data.columns:  # Check if feature exists in this country's data
-                            # Get most recent non-null value for this feature
-                            feature_data = recent_data[['years', f]].dropna(subset=[f]).sort_values('years', ascending=False)
-                            if len(feature_data) > 0:
-                                val = feature_data[f].iloc[0]
-                                if pd.notna(val):
-                                    # For vulnerability indicators that are "good when high", invert them
-                                    # because low values on these indicators = high vulnerability
-                                    if is_high_good(f):
-                                        vuln_values.append(1.0 - float(val))
-                                    else:
-                                        # For "bad when high" indicators, use value directly
-                                        vuln_values.append(float(val))
-
-                    res_values = []
-                    for f in res_features:
-                        if f in recent_data.columns:  # Check if feature exists in this country's data
-                            # Get most recent non-null value for this feature
-                            feature_data = recent_data[['years', f]].dropna(subset=[f]).sort_values('years', ascending=False)
-                            if len(feature_data) > 0:
-                                val = feature_data[f].iloc[0]
-                                if pd.notna(val):
-                                    # For resilience indicators that are "bad when high", invert them
-                                    # because high values on these indicators = low resilience
-                                    if is_high_good(f):
-                                        # For "good when high" indicators, use value directly
-                                        res_values.append(float(val))
-                                    else:
-                                        res_values.append(1.0 - float(val))
-                    
-                    # Calculate average scores
-                    vuln_avg = np.mean(vuln_values) if vuln_values else None
-                    res_avg = np.mean(res_values) if res_values else None
-                    
-                    # Categorize
-                    vuln_cat = categorize_score(vuln_avg)
-                    res_cat = categorize_score(res_avg)
-                    
-                    # Get overall risk
-                    overall_risk = get_overall_risk(vuln_cat, res_cat)
-                    
-                    # Always append the domain, even if there's no data
-                    risk_assessment.append({
-                        'Pathway': pathway,
-                        'Domain': domain,
-                        'Vulnerability': vuln_cat if vuln_cat else "No Data",
-                        'Resilience': res_cat if res_cat else "No Data",
-                        'Overall Score': overall_risk,
-                        '_vuln_avg': vuln_avg,
-                        '_res_avg': res_avg
-                    })
+        risk_assessment = []
         
-        if risk_assessment:
-            risk_df = pd.DataFrame(risk_assessment)
-            
-            # Style the dataframe
-            def style_risk_table(df):
-                styles = pd.DataFrame('', index=df.index, columns=df.columns)
+        # Define custom pathway order
+        pathway_order = ['Conflict', 'Climate', 'Development']
+
+        # Get all unique pathways and sort by custom order
+        all_pathways = {HIERARCHY[f]['Pathway'] for f in AVAILABLE_FEATURES}
+        ordered_pathways = [p for p in pathway_order if p in all_pathways]
+
+        for pathway in ordered_pathways:
+            pathway_domains = sorted({HIERARCHY[f]['Domain'] for f in AVAILABLE_FEATURES if HIERARCHY[f]['Pathway'] == pathway})                
+            for domain in pathway_domains:
+                # Get features for this pathway-domain combination (check against AVAILABLE_FEATURES, not country data)
+                all_domain_features = [f for f in AVAILABLE_FEATURES 
+                                if HIERARCHY[f]['Pathway'] == pathway 
+                                and HIERARCHY[f]['Domain'] == domain]
                 
-                for idx in df.index:
-                    risk = df.loc[idx, 'Overall Score']
-                    color = get_risk_color(risk)
-                    styles.loc[idx, 'Overall Score'] = f'background-color: {color}; color: white; font-weight: bold'
-                
-                return styles
-            
-            styled_risk = risk_df[['Pathway', 'Domain', 'Vulnerability', 'Resilience', 'Overall Score']].style.apply(
-                style_risk_table, axis=None
-            )
-            
-            st.dataframe(
-                styled_risk.hide(axis='index'),
-                use_container_width=True
-            )
-            
-            # Summary statistics
-            col1, col2, col3, col4 = st.columns(4)
-            
-            with col1:
-                severe_count = sum(1 for r in risk_assessment if r['Overall Score'] == 'Severe')
-                st.metric("🔴 Severe Risks", severe_count)
-            with col2:
-                sig_count = sum(1 for r in risk_assessment if r['Overall Score'] == 'Significant')
-                st.metric("🟠 Significant Risks", sig_count)
-            with col3:
-                mod_count = sum(1 for r in risk_assessment if r['Overall Score'] == 'Moderate')
-                st.metric("🟡 Moderate Risks", mod_count)
-            with col4:
-                minor_count = sum(1 for r in risk_assessment if r['Overall Score'] in ['Minor', 'Negligible'])
-                st.metric("🟢 Minor/Negligible", minor_count)
-            
-            st.markdown("---")
-        else:
-            st.info("No data available to generate risk assessment for selected filters")
-
-    
-    
-    # Framework Filters
-    st.markdown("### 🎛️ Filter Indicators by Pathway or Domain")
-    pathways = sorted({HIERARCHY[f]['Pathway'] for f in AVAILABLE_FEATURES})
-    
-    selected_pathway = st.selectbox("Choose a **Pathway** (Conflict, Climate, Development)", options=["All"] + pathways, index=0, key="sel_pathway")
-
-    # Helper function for cascade options (keep this local)
-    def cascade_options_local(current_filter: Dict[str, str]) -> Dict[str, List[str]]:
-        meta_rows = [HIERARCHY[f] for f in AVAILABLE_FEATURES]
-        df_meta = pd.DataFrame(meta_rows, index=AVAILABLE_FEATURES)
-        mask = pd.Series(True, index=df_meta.index)
-        if current_filter['Pathway'] != "All":
-            mask &= (df_meta['Pathway'] == current_filter['Pathway'])
-        doms = sorted(df_meta[mask]['Domain'].unique().tolist())
-        if current_filter.get('Domain', "All") != "All":
-            mask &= (df_meta['Domain'] == current_filter['Domain'])
-        comps = sorted(df_meta[mask]['Component'].unique().tolist())
-        if current_filter.get('Component', "All") != "All":
-            mask &= (df_meta['Component'] == current_filter['Component'])
-        drvs = sorted(df_meta[mask]['Driver'].unique().tolist())
-        return {"Domains": doms, "Components": comps, "Drivers": drvs}
-    
-    opts = cascade_options_local({"Pathway": selected_pathway, "Domain": "All", "Component": "All"})
-    domains = ["All"] + opts["Domains"]
-    selected_domain = st.selectbox("Choose a **Domain** (Conflict, Climate Hazards, Natural Resources, Economy, Institutions, Social, Technology & Innovation)", options=domains, index=0, key="sel_domain")
-    
-   
-    selected_component = "All"
-
-    selected_driver = "All"
-
-    # ════════════════════════════════════════════════════════════════
-    # Continue with existing trends table
-    # ════════════════════════════════════════════════════════════════
-
-    display_feature_cols = get_filtered_features(selected_pathway, selected_domain, selected_component, selected_driver)
-
-    # Prepare data for the trends table
-    if len(country_data) > 0 and len(display_feature_cols) > 0:
-        # Build 2-year (closest) sampling
-        min_year = min(available_years)
-        max_year = max(available_years)
-        display_years = [min_year]
-        current_year = min_year + 2
-        while current_year < max_year:
-            if current_year in available_years:
-                display_years.append(current_year)
-            else:
-                closest = min(available_years, key=lambda x: abs(x - current_year))
-                if closest not in display_years:
-                    display_years.append(closest)
-            current_year += 2
-        if max_year not in display_years:
-            display_years.append(max_year)
-        display_years = sorted(list(set(display_years)))
-
-        st.subheader(f"Key Drivers of Vulnerability and Resilience for {selected_country}")
-        filter_tags = [f"Pathway: {selected_pathway}", f"Domain: {selected_domain}"]
-        st.caption("Filters – " + " | ".join([t for t in filter_tags if not t.endswith("All")] or ["None (showing all in selection)"]))
-        st.markdown(f"*Showing data for years: {', '.join(map(str, display_years))}*")
-
-        # Build table rows
-        trends_data = []
-        for feat in display_feature_cols:
-            row_data = {"Indicator": make_readable_name(feat)}
-            values = []
-            year_values = {}  # Store for later coloring
-            
-            for year in display_years:
-                year_data = country_data[country_data['years'] == year]
-                if len(year_data) > 0 and feat in year_data.columns:
-                    value = year_data[feat].iloc[0]
-                    value = (None if pd.isna(value) else float(np.round(value, 2)))
-                    values.append(value)
-                    year_values[str(year)] = value
-                    row_data[str(year)] = value
-                else:
-                    values.append(None)
-                    year_values[str(year)] = None
-                    row_data[str(year)] = None
-
-            valid_values = [v for v in values if v is not None and not pd.isna(v)]
-            if len(valid_values) >= 2:
-                trend = float(np.round(valid_values[-1] - valid_values[0], 3))
-                high_good = is_high_good(feat)
-                
-                # Consider changes within ±0.03 as stable
-                if abs(trend) <= 0.03:
-                    row_data["Trend"] = "➡️ Stable"
-                else:
-                    if high_good:
-                        row_data["Trend"] = "📈 Improving" if trend > 0 else "📉 Worsening"
-                    else:
-                        row_data["Trend"] = "📈 Improving" if trend < 0 else "📉 Worsening"
-            else:
-                row_data["Trend"] = "⚠️ Insufficient data"
-
-            meta = HIERARCHY.get(feat, {})
-            row_data["Pathway"]   = meta.get("Pathway", "")
-            row_data["Domain"]    = meta.get("Domain", "")
-            row_data["Component"] = meta.get("Component", "")
-            row_data["_feature_id"] = feat
-            row_data["_year_values"] = year_values  # Store for styling
-
-            trends_data.append(row_data)
-
-        trends_df = pd.DataFrame(trends_data)
-
-        first_cols = ["Pathway","Domain","Indicator"]
-        year_cols = [str(y) for y in display_years]
-        final_cols = first_cols + year_cols + ["Trend"]
-
-        # ════════════════════════════════════════════════════════════════
-        # ABSOLUTE QUARTILE COLORING (GLOBAL)
-        # ════════════════════════════════════════════════════════════════
-        def color_cell_global(feat_id: str, val: float) -> str:
-            if val is None or pd.isna(val) or feat_id not in AVAILABLE_FEATURES:
-                return 'background-color: #f0f0f0'
-            
-            # Use the value directly (it's already normalized 0-1)
-            high_good = is_high_good(feat_id)
-            
-            if high_good:
-                # For GOOD HIGH features: high values = dark green
-                if val >= 0.75:
-                    return 'background-color: #1e8449; color: white'  # Dark green
-                elif val >= 0.50:
-                    return 'background-color: #2ecc71; color: white'  # Green
-                elif val >= 0.25:
-                    return 'background-color: #f39c12; color: white'  # Orange
-                else:
-                    return 'background-color: #e74c3c; color: white'  # Red
-            else:
-                # For BAD HIGH features: high values = red
-                if val >= 0.75:
-                    return 'background-color: #e74c3c; color: white'  # Red
-                elif val >= 0.50:
-                    return 'background-color: #f39c12; color: white'  # Orange
-                elif val >= 0.25:
-                    return 'background-color: #2ecc71; color: white'  # Green
-                else:
-                    return 'background-color: #1e8449; color: white'  # Dark green
-
-        def style_dataframe(df: pd.DataFrame, year_cols: list[str]) -> pd.io.formats.style.Styler:
-            """
-            - show only Pathway / Domain / Driver / Indicator + year cols + Trend
-            - hide Component and _feature_id
-            - hide index
-            - still color year columns using the original df's _feature_id
-            """
-
-            # columns we don't want to display
-            cols_to_drop = [c for c in ["Component", "_feature_id"] if c in df.columns]
-
-            # 1) build the display dataframe first (this is what we will style)
-            df_disp = df.drop(columns=cols_to_drop, errors="ignore").copy()
-
-            # figure out which columns to keep, in what order
-            base_cols = [c for c in ["Pathway", "Domain", "Driver", "Indicator"] if c in df_disp.columns]
-            year_cols_in_df = [c for c in year_cols if c in df_disp.columns]
-            tail_cols = [c for c in ["Trend"] if c in df_disp.columns]
-            ordered_cols = base_cols + year_cols_in_df + tail_cols
-            df_disp = df_disp.loc[:, ordered_cols]
-
-            # keep feature ids from the original df for coloring
-            feature_ids = df["_feature_id"].tolist() if "_feature_id" in df.columns else [None] * len(df_disp)
-
-            # 2) build a styles DataFrame that matches df_disp (NOT the Styler!)
-            styles = pd.DataFrame("", index=df_disp.index, columns=df_disp.columns)
-            for i, feat_id in enumerate(feature_ids):
-                if feat_id is None:
+                if not all_domain_features:
                     continue
-                for col in year_cols_in_df:
-                    val = df.loc[df.index[i], col] if col in df.columns else None
-                    styles.loc[df_disp.index[i], col] = color_cell_global(feat_id, val)
+                
+                # Separate vulnerability and resilience features
+                vuln_features = [f for f in all_domain_features if HIERARCHY[f]['Component'] == 'Vulnerability']
+                res_features = [f for f in all_domain_features if HIERARCHY[f]['Component'] == 'Resilience']
+                
+                # Calculate averages using most recent non-null value for each feature
+                vuln_values = []
+                for f in vuln_features:
+                    if f in recent_data.columns:  # Check if feature exists in this country's data
+                        # Get most recent non-null value for this feature
+                        feature_data = recent_data[['years', f]].dropna(subset=[f]).sort_values('years', ascending=False)
+                        if len(feature_data) > 0:
+                            val = feature_data[f].iloc[0]
+                            if pd.notna(val):
+                                # For vulnerability indicators that are "good when high", invert them
+                                # because low values on these indicators = high vulnerability
+                                if is_high_good(f):
+                                    vuln_values.append(1.0 - float(val))
+                                else:
+                                    # For "bad when high" indicators, use value directly
+                                    vuln_values.append(float(val))
 
-            # 3) create styler from the display df and apply styles
-            styler = (
-                df_disp.style
-                    .hide(axis="index")   # pandas 2.x syntax, cf. :contentReference[oaicite:2]{index=2}
-                    .apply(lambda _: styles, axis=None)  # apply our prebuilt style matrix
-                    .format({c: fmt2_trim for c in year_cols_in_df})
-            )
-            return styler
-
-        # Prepare display dataframe (without helper columns)
-        display_df = trends_df[final_cols].copy()
-
-        # regenerate helper using our updated style function
-        styled_df_fn = lambda df: style_dataframe(df, year_cols)
-
-        # split by component (kept in the underlying df, not shown)
-        vuln_df = trends_df[trends_df["Component"] == "Vulnerability"].copy()
-        res_df  = trends_df[trends_df["Component"] == "Resilience"].copy()
-
-        st.subheader(f"Key Drivers of Vulnerability for {selected_country}")
-        if len(vuln_df):
-            st.dataframe(
-                style_dataframe(vuln_df, year_cols),
-                use_container_width=True,
-                height=min(600, 60 + 28 * len(vuln_df)),
-            )
-        else:
-            st.info("No vulnerability indicators match the current filters.")
-
-        st.subheader(f"Key Drivers of Resilience for {selected_country}")
-        if len(res_df):
-            st.dataframe(
-                style_dataframe(res_df, year_cols),
-                use_container_width=True,
-                height=min(600, 60 + 28 * len(res_df)),
-            )
-        else:
-            st.info("No resilience indicators match the current filters.")
-
-        # Legend & summaries
-        colA, colB = st.columns(2)
-        with colA:
-            st.markdown("### 🎨 Color Legend (Global Percentiles)")
-            st.markdown("""
-            Colors represent global performance after adjusting for indicator direction:
-            - 🟩 **Dark Green** (≥ 75th percentile): Top quartile globally
-            - 🟩 **Green** (50th-75th percentile): Above median performance
-            - 🟠 **Orange** (25th-50th percentile): Below median performance
-            - 🔴 **Red** (< 25th percentile): Bottom quartile globally
-            - ⬜ **Gray**: No data available
+                res_values = []
+                for f in res_features:
+                    if f in recent_data.columns:  # Check if feature exists in this country's data
+                        # Get most recent non-null value for this feature
+                        feature_data = recent_data[['years', f]].dropna(subset=[f]).sort_values('years', ascending=False)
+                        if len(feature_data) > 0:
+                            val = feature_data[f].iloc[0]
+                            if pd.notna(val):
+                                # For resilience indicators that are "bad when high", invert them
+                                # because high values on these indicators = low resilience
+                                if is_high_good(f):
+                                    # For "good when high" indicators, use value directly
+                                    res_values.append(float(val))
+                                else:
+                                    res_values.append(1.0 - float(val))
+                
+                # Calculate average scores
+                vuln_avg = np.mean(vuln_values) if vuln_values else None
+                res_avg = np.mean(res_values) if res_values else None
+                
+                # Categorize
+                vuln_cat = categorize_score(vuln_avg)
+                res_cat = categorize_score(res_avg)
+                
+                # Get overall risk
+                overall_risk = get_overall_risk(vuln_cat, res_cat)
+                
+                # Always append the domain, even if there's no data
+                risk_assessment.append({
+                    'Pathway': pathway,
+                    'Domain': domain,
+                    'Vulnerability': vuln_cat if vuln_cat else "No Data",
+                    'Resilience': res_cat if res_cat else "No Data",
+                    'Overall Score': overall_risk,
+                    '_vuln_avg': vuln_avg,
+                    '_res_avg': res_avg
+                })
+    
+    if risk_assessment:
+        risk_df = pd.DataFrame(risk_assessment)
+        
+        # Style the dataframe
+        def style_risk_table(df):
+            styles = pd.DataFrame('', index=df.index, columns=df.columns)
             
-            *Note: Colors are automatically adjusted based on whether high values are good or bad for each indicator*
-            """)
-        # with colB:
-        #     st.markdown("### 🧭 Indicator Directionality")
-        #     st.markdown("""
-        #     **Higher is better (green when high):**
-        #     GDP per capita, Water resources, Sanitation access, Health coverage, Government effectiveness, R&D expenditure, Internet usage
+            for idx in df.index:
+                risk = df.loc[idx, 'Overall Score']
+                color = get_risk_color(risk)
+                styles.loc[idx, 'Overall Score'] = f'background-color: {color}; color: white; font-weight: bold'
             
-        #     **Higher is worse (red when high):**
-        #     Mortality rates, Unemployment, Inequality (Gini), Debt ratios, Water stress, Displacement, Food insecurity, Aid dependence
-            
-        #     *The system automatically adjusts coloring based on each indicator's nature*
-        #     """)
-
-        st.subheader("📊 Summary Statistics")
+            return styles
+        
+        styled_risk = risk_df[['Pathway', 'Domain', 'Vulnerability', 'Resilience', 'Overall Score']].style.apply(
+            style_risk_table, axis=None
+        )
+        
+        st.dataframe(
+            styled_risk.hide(axis='index'),
+            use_container_width=True
+        )
+        
+        # Summary statistics
         col1, col2, col3, col4 = st.columns(4)
-
-        improving = sum(1 for t in trends_df['Trend'] if 'Improving' in str(t))
-        worsening = sum(1 for t in trends_df['Trend'] if 'Worsening' in str(t))
-        stable = sum(1 for t in trends_df['Trend'] if 'Stable' in str(t))
-        insufficient = sum(1 for t in trends_df['Trend'] if 'Insufficient' in str(t))
         
         with col1:
-            st.metric("Improving Indicators", improving, help="Number of indicators showing improvement over time")
+            severe_count = sum(1 for r in risk_assessment if r['Overall Score'] == 'Severe')
+            st.metric("🔴 Severe Risks", severe_count)
         with col2:
-            st.metric("Worsening Indicators", worsening, help="Number of indicators showing deterioration")
+            sig_count = sum(1 for r in risk_assessment if r['Overall Score'] == 'Significant')
+            st.metric("🟠 Significant Risks", sig_count)
         with col3:
-            st.metric("Stable Indicators", stable, help="Number of indicators with minimal change")
+            mod_count = sum(1 for r in risk_assessment if r['Overall Score'] == 'Moderate')
+            st.metric("🟡 Moderate Risks", mod_count)
         with col4:
-            total_cells = len(display_feature_cols) * len(display_years)
-            non_null_cells = sum(
-                1 for _, row in trends_df.iterrows()
-                for year in display_years
-                if str(year) in row and pd.notna(row[str(year)])
-            )
-            completeness = (non_null_cells / total_cells * 100) if total_cells > 0 else 0
-            st.metric("Data Completeness", f"{completeness:.1f}%", help="Percentage of cells with available data")
+            minor_count = sum(1 for r in risk_assessment if r['Overall Score'] in ['Minor', 'Negligible'])
+            st.metric("🟢 Minor/Negligible", minor_count)
+        
+        st.markdown("---")
+    else:
+        st.info("No data available to generate risk assessment for selected filters")
 
-        with st.expander("💪 View Strengths & Weaknesses"):
-            st.markdown("Based on latest data")
 
-            TARGET_YEAR = 2022
-            rows_for_rank = []
 
-            # we pool vulnerability + resilience indicators together from trends_df
-            for _, row in trends_df.iterrows():
-                feat_id = row["_feature_id"]
-                indicator_label = row["Indicator"]
+# Framework Filters
+st.markdown("### 🎛️ Filter Indicators by Pathway or Domain")
+pathways = sorted({HIERARCHY[f]['Pathway'] for f in AVAILABLE_FEATURES})
 
-                # pull the 2022 value (or closest earlier) from the underlying country_data
-                val_2022, actual_year = get_value_for_target_year(
-                    country_data,
-                    feat_id,
-                    target_year=TARGET_YEAR,
-                    max_lookback=5,   # look back to 2017 at most
-                )
+selected_pathway = st.selectbox("Choose a **Pathway** (Conflict, Climate, Development)", options=["All"] + pathways, index=0, key="sel_pathway")
 
-                if val_2022 is None:
-                    continue  # nothing to rank for this indicator
+# Helper function for cascade options (keep this local)
+def cascade_options_local(current_filter: Dict[str, str]) -> Dict[str, List[str]]:
+    meta_rows = [HIERARCHY[f] for f in AVAILABLE_FEATURES]
+    df_meta = pd.DataFrame(meta_rows, index=AVAILABLE_FEATURES)
+    mask = pd.Series(True, index=df_meta.index)
+    if current_filter['Pathway'] != "All":
+        mask &= (df_meta['Pathway'] == current_filter['Pathway'])
+    doms = sorted(df_meta[mask]['Domain'].unique().tolist())
+    if current_filter.get('Domain', "All") != "All":
+        mask &= (df_meta['Domain'] == current_filter['Domain'])
+    comps = sorted(df_meta[mask]['Component'].unique().tolist())
+    if current_filter.get('Component', "All") != "All":
+        mask &= (df_meta['Component'] == current_filter['Component'])
+    drvs = sorted(df_meta[mask]['Driver'].unique().tolist())
+    return {"Domains": doms, "Components": comps, "Drivers": drvs}
 
-                hg = is_high_good(feat_id)
+opts = cascade_options_local({"Pathway": selected_pathway, "Domain": "All", "Component": "All"})
+domains = ["All"] + opts["Domains"]
+selected_domain = st.selectbox("Choose a **Domain** (Conflict, Climate Hazards, Natural Resources, Economy, Institutions, Social, Technology & Innovation)", options=domains, index=0, key="sel_domain")
 
-                # Strength logic:
-                # - high-is-good  -> higher = stronger
-                # - low-is-good   -> lower = stronger  (so 1 - value)
-                if hg:
-                    strength_score = val_2022
-                else:
-                    strength_score = 1.0 - val_2022
 
-                rows_for_rank.append({
-                    "Indicator": indicator_label,
-                    "Feature ID": feat_id,
-                    "Value (2022)": float(val_2022),
-                    "Year Used": actual_year,
-                    "Is High Good": hg,
-                    "Strength Score": strength_score,
-                })
+selected_component = "All"
 
-            if not rows_for_rank:
-                st.info("No data available for 2022 (or earlier) to compute strengths/weaknesses.")
+selected_driver = "All"
+
+# ════════════════════════════════════════════════════════════════
+# Continue with existing trends table
+# ════════════════════════════════════════════════════════════════
+
+display_feature_cols = get_filtered_features(selected_pathway, selected_domain, selected_component, selected_driver)
+
+# Prepare data for the trends table
+if len(country_data) > 0 and len(display_feature_cols) > 0:
+    # Build 2-year (closest) sampling
+    min_year = min(available_years)
+    max_year = max(available_years)
+    display_years = [min_year]
+    current_year = min_year + 2
+    while current_year < max_year:
+        if current_year in available_years:
+            display_years.append(current_year)
+        else:
+            closest = min(available_years, key=lambda x: abs(x - current_year))
+            if closest not in display_years:
+                display_years.append(closest)
+        current_year += 2
+    if max_year not in display_years:
+        display_years.append(max_year)
+    display_years = sorted(list(set(display_years)))
+
+    st.subheader(f"Key Drivers of Vulnerability and Resilience for {selected_country}")
+    filter_tags = [f"Pathway: {selected_pathway}", f"Domain: {selected_domain}"]
+    st.caption("Filters – " + " | ".join([t for t in filter_tags if not t.endswith("All")] or ["None (showing all in selection)"]))
+    st.markdown(f"*Showing data for years: {', '.join(map(str, display_years))}*")
+
+    # Build table rows
+    trends_data = []
+    for feat in display_feature_cols:
+        row_data = {"Indicator": make_readable_name(feat)}
+        values = []
+        year_values = {}  # Store for later coloring
+        
+        for year in display_years:
+            year_data = country_data[country_data['years'] == year]
+            if len(year_data) > 0 and feat in year_data.columns:
+                value = year_data[feat].iloc[0]
+                value = (None if pd.isna(value) else float(np.round(value, 2)))
+                values.append(value)
+                year_values[str(year)] = value
+                row_data[str(year)] = value
             else:
-                sw_df = pd.DataFrame(rows_for_rank)
+                values.append(None)
+                year_values[str(year)] = None
+                row_data[str(year)] = None
 
-                # ── Top 5 Strengths ───────────────────────────────────────────────
-                # highest high-is-good values   → high Strength Score
-                # lowest low-is-good values     → high Strength Score (because we did 1 - value)
-                top_strengths = (
-                    sw_df.sort_values(["Strength Score", "Year Used"], ascending=[False, False])
-                        .head(5)
-                )
-
-                # ── Top 5 Weaknesses ─────────────────────────────────────────────
-                # highest low-is-good values    → lowest Strength Score (because 1 - value is small)
-                # lowest high-is-good values    → lowest Strength Score
-                top_weaknesses = (
-                    sw_df.sort_values(["Strength Score", "Year Used"], ascending=[True, False])
-                        .head(5)
-                )
-
-                sL, sR = st.columns(2)
-
-                with sL:
-                    st.markdown("*🌟 Top 5 Strengths*")
-                    st.caption("Strongest resilience and vulnerability indicators")
-                    for _, r in top_strengths.iterrows():
-                        if r["Is High Good"]:
-                            # e.g. 0.87 (higher is better)
-                            st.markdown(
-                                f"• *{r['Indicator']}* — {r['Value (2022)']:.2f}"
-                                f"[{int(r['Year Used'])}]"
-                            )
-                        else:
-                            # low is good → show that explicitly
-                            st.markdown(
-                                f"• *{r['Indicator']}* — {r['Value (2022)']:.2f}"
-                                f"[{int(r['Year Used'])}]"
-                            )
-
-                with sR:
-                    st.markdown("*⚠️ Top 5 Weaknesses*")
-                    st.caption("Weakest resilience and vulnerability indicators")
-                    for _, r in top_weaknesses.iterrows():
-                        if r["Is High Good"]:
-                            # high-is-good but low value → weakness
-                            st.markdown(
-                                f"• *{r['Indicator']}* — {r['Value (2022)']:.2f}"
-                                f"[{int(r['Year Used'])}]"
-                            )
-                        else:
-                            # low-is-good but high value → weakness
-                            st.markdown(
-                                f"• *{r['Indicator']}* — {r['Value (2022)']:.2f}"
-                                f"[{int(r['Year Used'])}]"
-                            )
-
-                # optional summary (kept from your original version)
-                st.markdown("---")
-                st.markdown("*📈 Performance Summary (2022 baseline)*")
-                c1, c2, c3 = st.columns(3)
-                with c1:
-                    st.metric("Indicators scored", len(sw_df))
-                with c2:
-                    st.metric("Top-quartile-ish (score ≥ 0.75)", int((sw_df["Strength Score"] >= 0.75).sum()))
-                with c3:
-                    st.metric("Bottom (score < 0.25)", int((sw_df["Strength Score"] < 0.25).sum()))
-
-        with st.expander("🔍 View Key Changes"):
-            changes = []
-            for _, row in trends_df.iterrows():
-                values = [row[col] for col in year_cols if col in row.index]
-                valid_values = [(i, v) for i, v in enumerate(values) if v is not None and not pd.isna(v)]
-                if len(valid_values) >= 2:
-                    first_idx, first_val = valid_values[0]
-                    last_idx, last_val = valid_values[-1]
-                    
-                    # Calculate absolute change (not percentage)
-                    abs_change = float(np.round(last_val - first_val, 3))
-                    
-                    high_good = is_high_good(row["_feature_id"])
-                    
-                    # Determine if it's an improvement based on direction
-                    # For good high features: positive change = improvement
-                    # For bad high features: negative change = improvement
-                    is_improvement = (abs_change > 0) if high_good else (abs_change < 0)
-                    
-                    changes.append({
-                        'Indicator': row['Indicator'],
-                        'Absolute Change': abs_change,
-                        'Direction': 'Improvement' if is_improvement else 'Deterioration',
-                        'First Year': display_years[first_idx],
-                        'Last Year': display_years[last_idx],
-                        'First Value': first_val,
-                        'Last Value': last_val
-                    })
+        valid_values = [v for v in values if v is not None and not pd.isna(v)]
+        if len(valid_values) >= 2:
+            trend = float(np.round(valid_values[-1] - valid_values[0], 3))
+            high_good = is_high_good(feat)
             
-            if changes:
-                changes_df = pd.DataFrame(changes)
-                cL, cR = st.columns(2)
-                with cL:
-                    st.markdown("**🌟 Top 5 Improvements**")
-                    improvements = changes_df[changes_df['Direction'] == 'Improvement'].copy()
-                    # Sort by absolute magnitude of change (largest improvements)
-                    improvements['Magnitude'] = improvements['Absolute Change'].abs()
-                    improvements = improvements.nlargest(5, 'Magnitude', keep='first')
-                    if len(improvements) > 0:
-                        for _, r in improvements.iterrows():
-                            st.markdown(f"• **{r['Indicator']}**: +{r['Magnitude']:.3f} "
-                                        f"({r['First Year']}-{r['Last Year']})")
+            # Consider changes within ±0.03 as stable
+            if abs(trend) <= 0.03:
+                row_data["Trend"] = "➡️ Stable"
+            else:
+                if high_good:
+                    row_data["Trend"] = "📈 Improving" if trend > 0 else "📉 Worsening"
+                else:
+                    row_data["Trend"] = "📈 Improving" if trend < 0 else "📉 Worsening"
+        else:
+            row_data["Trend"] = "⚠️ Insufficient data"
+
+        meta = HIERARCHY.get(feat, {})
+        row_data["Pathway"]   = meta.get("Pathway", "")
+        row_data["Domain"]    = meta.get("Domain", "")
+        row_data["Component"] = meta.get("Component", "")
+        row_data["_feature_id"] = feat
+        row_data["_year_values"] = year_values  # Store for styling
+
+        trends_data.append(row_data)
+
+    trends_df = pd.DataFrame(trends_data)
+
+    first_cols = ["Pathway","Domain","Indicator"]
+    year_cols = [str(y) for y in display_years]
+    final_cols = first_cols + year_cols + ["Trend"]
+
+    # ════════════════════════════════════════════════════════════════
+    # ABSOLUTE QUARTILE COLORING (GLOBAL)
+    # ════════════════════════════════════════════════════════════════
+    def color_cell_global(feat_id: str, val: float) -> str:
+        if val is None or pd.isna(val) or feat_id not in AVAILABLE_FEATURES:
+            return 'background-color: #f0f0f0'
+        
+        # Use the value directly (it's already normalized 0-1)
+        high_good = is_high_good(feat_id)
+        
+        if high_good:
+            # For GOOD HIGH features: high values = dark green
+            if val >= 0.75:
+                return 'background-color: #1e8449; color: white'  # Dark green
+            elif val >= 0.50:
+                return 'background-color: #2ecc71; color: white'  # Green
+            elif val >= 0.25:
+                return 'background-color: #f39c12; color: white'  # Orange
+            else:
+                return 'background-color: #e74c3c; color: white'  # Red
+        else:
+            # For BAD HIGH features: high values = red
+            if val >= 0.75:
+                return 'background-color: #e74c3c; color: white'  # Red
+            elif val >= 0.50:
+                return 'background-color: #f39c12; color: white'  # Orange
+            elif val >= 0.25:
+                return 'background-color: #2ecc71; color: white'  # Green
+            else:
+                return 'background-color: #1e8449; color: white'  # Dark green
+
+    def style_dataframe(df: pd.DataFrame, year_cols: list[str]) -> pd.io.formats.style.Styler:
+        """
+        - show only Pathway / Domain / Driver / Indicator + year cols + Trend
+        - hide Component and _feature_id
+        - hide index
+        - still color year columns using the original df's _feature_id
+        """
+
+        # columns we don't want to display
+        cols_to_drop = [c for c in ["Component", "_feature_id"] if c in df.columns]
+
+        # 1) build the display dataframe first (this is what we will style)
+        df_disp = df.drop(columns=cols_to_drop, errors="ignore").copy()
+
+        # figure out which columns to keep, in what order
+        base_cols = [c for c in ["Pathway", "Domain", "Driver", "Indicator"] if c in df_disp.columns]
+        year_cols_in_df = [c for c in year_cols if c in df_disp.columns]
+        tail_cols = [c for c in ["Trend"] if c in df_disp.columns]
+        ordered_cols = base_cols + year_cols_in_df + tail_cols
+        df_disp = df_disp.loc[:, ordered_cols]
+
+        # keep feature ids from the original df for coloring
+        feature_ids = df["_feature_id"].tolist() if "_feature_id" in df.columns else [None] * len(df_disp)
+
+        # 2) build a styles DataFrame that matches df_disp (NOT the Styler!)
+        styles = pd.DataFrame("", index=df_disp.index, columns=df_disp.columns)
+        for i, feat_id in enumerate(feature_ids):
+            if feat_id is None:
+                continue
+            for col in year_cols_in_df:
+                val = df.loc[df.index[i], col] if col in df.columns else None
+                styles.loc[df_disp.index[i], col] = color_cell_global(feat_id, val)
+
+        # 3) create styler from the display df and apply styles
+        styler = (
+            df_disp.style
+                .hide(axis="index")   # pandas 2.x syntax, cf. :contentReference[oaicite:2]{index=2}
+                .apply(lambda _: styles, axis=None)  # apply our prebuilt style matrix
+                .format({c: fmt2_trim for c in year_cols_in_df})
+        )
+        return styler
+
+    # Prepare display dataframe (without helper columns)
+    display_df = trends_df[final_cols].copy()
+
+    # regenerate helper using our updated style function
+    styled_df_fn = lambda df: style_dataframe(df, year_cols)
+
+    # split by component (kept in the underlying df, not shown)
+    vuln_df = trends_df[trends_df["Component"] == "Vulnerability"].copy()
+    res_df  = trends_df[trends_df["Component"] == "Resilience"].copy()
+
+    st.subheader(f"Key Drivers of Vulnerability for {selected_country}")
+    if len(vuln_df):
+        st.dataframe(
+            style_dataframe(vuln_df, year_cols),
+            use_container_width=True,
+            height=min(600, 60 + 28 * len(vuln_df)),
+        )
+    else:
+        st.info("No vulnerability indicators match the current filters.")
+
+    st.subheader(f"Key Drivers of Resilience for {selected_country}")
+    if len(res_df):
+        st.dataframe(
+            style_dataframe(res_df, year_cols),
+            use_container_width=True,
+            height=min(600, 60 + 28 * len(res_df)),
+        )
+    else:
+        st.info("No resilience indicators match the current filters.")
+
+    # Legend & summaries
+    colA, colB = st.columns(2)
+    with colA:
+        st.markdown("### 🎨 Color Legend (Global Percentiles)")
+        st.markdown("""
+        Colors represent global performance after adjusting for indicator direction:
+        - 🟩 **Dark Green** (≥ 75th percentile): Top quartile globally
+        - 🟩 **Green** (50th-75th percentile): Above median performance
+        - 🟠 **Orange** (25th-50th percentile): Below median performance
+        - 🔴 **Red** (< 25th percentile): Bottom quartile globally
+        - ⬜ **Gray**: No data available
+        
+        *Note: Colors are automatically adjusted based on whether high values are good or bad for each indicator*
+        """)
+    # with colB:
+    #     st.markdown("### 🧭 Indicator Directionality")
+    #     st.markdown("""
+    #     **Higher is better (green when high):**
+    #     GDP per capita, Water resources, Sanitation access, Health coverage, Government effectiveness, R&D expenditure, Internet usage
+        
+    #     **Higher is worse (red when high):**
+    #     Mortality rates, Unemployment, Inequality (Gini), Debt ratios, Water stress, Displacement, Food insecurity, Aid dependence
+        
+    #     *The system automatically adjusts coloring based on each indicator's nature*
+    #     """)
+
+    st.subheader("📊 Summary Statistics")
+    col1, col2, col3, col4 = st.columns(4)
+
+    improving = sum(1 for t in trends_df['Trend'] if 'Improving' in str(t))
+    worsening = sum(1 for t in trends_df['Trend'] if 'Worsening' in str(t))
+    stable = sum(1 for t in trends_df['Trend'] if 'Stable' in str(t))
+    insufficient = sum(1 for t in trends_df['Trend'] if 'Insufficient' in str(t))
+    
+    with col1:
+        st.metric("Improving Indicators", improving, help="Number of indicators showing improvement over time")
+    with col2:
+        st.metric("Worsening Indicators", worsening, help="Number of indicators showing deterioration")
+    with col3:
+        st.metric("Stable Indicators", stable, help="Number of indicators with minimal change")
+    with col4:
+        total_cells = len(display_feature_cols) * len(display_years)
+        non_null_cells = sum(
+            1 for _, row in trends_df.iterrows()
+            for year in display_years
+            if str(year) in row and pd.notna(row[str(year)])
+        )
+        completeness = (non_null_cells / total_cells * 100) if total_cells > 0 else 0
+        st.metric("Data Completeness", f"{completeness:.1f}%", help="Percentage of cells with available data")
+
+    with st.expander("💪 View Strengths & Weaknesses"):
+        st.markdown("Based on latest data")
+
+        TARGET_YEAR = 2022
+        rows_for_rank = []
+
+        # we pool vulnerability + resilience indicators together from trends_df
+        for _, row in trends_df.iterrows():
+            feat_id = row["_feature_id"]
+            indicator_label = row["Indicator"]
+
+            # pull the 2022 value (or closest earlier) from the underlying country_data
+            val_2022, actual_year = get_value_for_target_year(
+                country_data,
+                feat_id,
+                target_year=TARGET_YEAR,
+                max_lookback=5,   # look back to 2017 at most
+            )
+
+            if val_2022 is None:
+                continue  # nothing to rank for this indicator
+
+            hg = is_high_good(feat_id)
+
+            # Strength logic:
+            # - high-is-good  -> higher = stronger
+            # - low-is-good   -> lower = stronger  (so 1 - value)
+            if hg:
+                strength_score = val_2022
+            else:
+                strength_score = 1.0 - val_2022
+
+            rows_for_rank.append({
+                "Indicator": indicator_label,
+                "Feature ID": feat_id,
+                "Value (2022)": float(val_2022),
+                "Year Used": actual_year,
+                "Is High Good": hg,
+                "Strength Score": strength_score,
+            })
+
+        if not rows_for_rank:
+            st.info("No data available for 2022 (or earlier) to compute strengths/weaknesses.")
+        else:
+            sw_df = pd.DataFrame(rows_for_rank)
+
+            # ── Top 5 Strengths ───────────────────────────────────────────────
+            # highest high-is-good values   → high Strength Score
+            # lowest low-is-good values     → high Strength Score (because we did 1 - value)
+            top_strengths = (
+                sw_df.sort_values(["Strength Score", "Year Used"], ascending=[False, False])
+                    .head(5)
+            )
+
+            # ── Top 5 Weaknesses ─────────────────────────────────────────────
+            # highest low-is-good values    → lowest Strength Score (because 1 - value is small)
+            # lowest high-is-good values    → lowest Strength Score
+            top_weaknesses = (
+                sw_df.sort_values(["Strength Score", "Year Used"], ascending=[True, False])
+                    .head(5)
+            )
+
+            sL, sR = st.columns(2)
+
+            with sL:
+                st.markdown("*🌟 Top 5 Strengths*")
+                st.caption("Strongest resilience and vulnerability indicators")
+                for _, r in top_strengths.iterrows():
+                    if r["Is High Good"]:
+                        # e.g. 0.87 (higher is better)
+                        st.markdown(
+                            f"• *{r['Indicator']}* — {r['Value (2022)']:.2f}"
+                            f"[{int(r['Year Used'])}]"
+                        )
                     else:
-                        st.info("No significant improvements found")
-                with cR:
-                    st.markdown("**⚠️ Top 5 Deteriorations**")
-                    deteriorations = changes_df[changes_df['Direction'] == 'Deterioration'].copy()
-                    # Sort by absolute magnitude of change (largest deteriorations)
-                    deteriorations['Magnitude'] = deteriorations['Absolute Change'].abs()
-                    deteriorations = deteriorations.nlargest(5, 'Magnitude', keep='first')
-                    if len(deteriorations) > 0:
-                        for _, r in deteriorations.iterrows():
-                            st.markdown(f"• **{r['Indicator']}**: -{r['Magnitude']:.3f} "
-                                        f"({r['First Year']}-{r['Last Year']})")
+                        # low is good → show that explicitly
+                        st.markdown(
+                            f"• *{r['Indicator']}* — {r['Value (2022)']:.2f}"
+                            f"[{int(r['Year Used'])}]"
+                        )
+
+            with sR:
+                st.markdown("*⚠️ Top 5 Weaknesses*")
+                st.caption("Weakest resilience and vulnerability indicators")
+                for _, r in top_weaknesses.iterrows():
+                    if r["Is High Good"]:
+                        # high-is-good but low value → weakness
+                        st.markdown(
+                            f"• *{r['Indicator']}* — {r['Value (2022)']:.2f}"
+                            f"[{int(r['Year Used'])}]"
+                        )
                     else:
-                        st.info("No significant deteriorations found")
+                        # low-is-good but high value → weakness
+                        st.markdown(
+                            f"• *{r['Indicator']}* — {r['Value (2022)']:.2f}"
+                            f"[{int(r['Year Used'])}]"
+                        )
+
+            # optional summary (kept from your original version)
+            st.markdown("---")
+            st.markdown("*📈 Performance Summary (2022 baseline)*")
+            c1, c2, c3 = st.columns(3)
+            with c1:
+                st.metric("Indicators scored", len(sw_df))
+            with c2:
+                st.metric("Top-quartile-ish (score ≥ 0.75)", int((sw_df["Strength Score"] >= 0.75).sum()))
+            with c3:
+                st.metric("Bottom (score < 0.25)", int((sw_df["Strength Score"] < 0.25).sum()))
+
+    with st.expander("🔍 View Key Changes"):
+        changes = []
+        for _, row in trends_df.iterrows():
+            values = [row[col] for col in year_cols if col in row.index]
+            valid_values = [(i, v) for i, v in enumerate(values) if v is not None and not pd.isna(v)]
+            if len(valid_values) >= 2:
+                first_idx, first_val = valid_values[0]
+                last_idx, last_val = valid_values[-1]
                 
+                # Calculate absolute change (not percentage)
+                abs_change = float(np.round(last_val - first_val, 3))
+                
+                high_good = is_high_good(row["_feature_id"])
+                
+                # Determine if it's an improvement based on direction
+                # For good high features: positive change = improvement
+                # For bad high features: negative change = improvement
+                is_improvement = (abs_change > 0) if high_good else (abs_change < 0)
+                
+                changes.append({
+                    'Indicator': row['Indicator'],
+                    'Absolute Change': abs_change,
+                    'Direction': 'Improvement' if is_improvement else 'Deterioration',
+                    'First Year': display_years[first_idx],
+                    'Last Year': display_years[last_idx],
+                    'First Value': first_val,
+                    'Last Value': last_val
+                })
+        
+        if changes:
+            changes_df = pd.DataFrame(changes)
+            cL, cR = st.columns(2)
+            with cL:
+                st.markdown("**🌟 Top 5 Improvements**")
+                improvements = changes_df[changes_df['Direction'] == 'Improvement'].copy()
+                # Sort by absolute magnitude of change (largest improvements)
+                improvements['Magnitude'] = improvements['Absolute Change'].abs()
+                improvements = improvements.nlargest(5, 'Magnitude', keep='first')
+                if len(improvements) > 0:
+                    for _, r in improvements.iterrows():
+                        st.markdown(f"• **{r['Indicator']}**: +{r['Magnitude']:.3f} "
+                                    f"({r['First Year']}-{r['Last Year']})")
+                else:
+                    st.info("No significant improvements found")
+            with cR:
+                st.markdown("**⚠️ Top 5 Deteriorations**")
+                deteriorations = changes_df[changes_df['Direction'] == 'Deterioration'].copy()
+                # Sort by absolute magnitude of change (largest deteriorations)
+                deteriorations['Magnitude'] = deteriorations['Absolute Change'].abs()
+                deteriorations = deteriorations.nlargest(5, 'Magnitude', keep='first')
+                if len(deteriorations) > 0:
+                    for _, r in deteriorations.iterrows():
+                        st.markdown(f"• **{r['Indicator']}**: -{r['Magnitude']:.3f} "
+                                    f"({r['First Year']}-{r['Last Year']})")
+                else:
+                    st.info("No significant deteriorations found")
+            
 
 
 # Footer
 st.markdown("---")
-st.caption("Early Warning System v3.0 | Data sources: World Bank, UN, V-Dem, and other international organizations")
-st.caption("Note: All values are globally normalized (0-1 scale) for cross-country comparison. Raw value display option coming soon.")
+st.caption("Arab Risk Monitor v2.0 | Data sources: World Bank, UN, V-Dem, and other international organizations")
+st.caption("Note: All values are globally normalized (0-1 scale) for cross-country comparison.")
