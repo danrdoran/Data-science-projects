@@ -14,19 +14,42 @@ sns.set_style("whitegrid")
 plt.rcParams.update({'font.size': 11})
 
 st.set_page_config(page_title="Arab Risk Monitor - Multidimensional Risk Analysis", layout="wide")
-PURPLE = "#FBF8FF"
-st.markdown(f"""
+# PURPLE = "#FBF8FF"
+# st.markdown(f"""
+#     <style>
+#         .stApp, [data-testid="stAppViewContainer"] {{ background: {PURPLE}; }}
+#         [data-testid="stSidebar"] > div:first-child {{ background: {PURPLE}; }}
+#         [data-testid="stHeader"] {{ background: rgba(0,0,0,0); }}
+#         .metric-label {{ font-size: 14px !important; }}
+#         .metric-value {{ font-size: 24px !important; font-weight: bold !important; }}
+#     </style>
+# """, unsafe_allow_html=True)
+# plt.rcParams["figure.facecolor"] = "none"
+# plt.rcParams["axes.facecolor"]   = "none"
+# plt.rcParams["savefig.facecolor"] = "none"
+
+st.markdown(
+    """
     <style>
-        .stApp, [data-testid="stAppViewContainer"] {{ background: {PURPLE}; }}
-        [data-testid="stSidebar"] > div:first-child {{ background: {PURPLE}; }}
-        [data-testid="stHeader"] {{ background: rgba(0,0,0,0); }}
-        .metric-label {{ font-size: 14px !important; }}
-        .metric-value {{ font-size: 24px !important; font-weight: bold !important; }}
+      /* Use Streamlit's active theme colors (works in both light/dark and when users toggle Settings) */
+      .stApp, [data-testid="stAppViewContainer"] {
+        background: var(--background-color);
+        color: var(--text-color);
+      }
+
+      [data-testid="stSidebar"] > div:first-child {
+        background: var(--background-color);
+        color: var(--text-color);
+      }
+
+      [data-testid="stHeader"] { background: rgba(0,0,0,0); }
+
+      .metric-label { font-size: 14px !important; }
+      .metric-value { font-size: 24px !important; font-weight: bold !important; }
     </style>
-""", unsafe_allow_html=True)
-plt.rcParams["figure.facecolor"] = "none"
-plt.rcParams["axes.facecolor"]   = "none"
-plt.rcParams["savefig.facecolor"] = "none"
+    """,
+    unsafe_allow_html=True,
+)
 
 st.title("📈 Arab Risk Monitor - Multidimensional Risk Analysis")
 
